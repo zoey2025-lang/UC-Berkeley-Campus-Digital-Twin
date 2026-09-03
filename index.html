@@ -180,11 +180,11 @@
       setLoading(true);
     
       try {
-        // Calls the serverless function hosted alongside your site
-        const response = await fetch("/api/chat", {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            // text/plain prevents the browser from sending a CORS pre-flight OPTIONS request
+            "Content-Type": "text/plain;charset=utf-8" 
           },
           body: JSON.stringify({
             text: text,
@@ -203,7 +203,7 @@
           appendMessage("Sorry, I could not process that message.", "bot");
         }
       } catch (error) {
-        console.error("Error communicating with backend:", error);
+        console.error("Error communicating with Google Proxy:", error);
         appendMessage("An error occurred. Please try again.", "bot");
       } finally {
         setLoading(false);
