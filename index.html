@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom AI Assistant</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #f4f6f9;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* ULTRA WIDE CHAT CONTAINER */
+    .chat-card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      width: 95vw;
+      max-width: 1200px;
+      height: 85vh;
+      max-height: 850px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background-color: #ffffff;
+      padding: 24px;
+      border-bottom: 1px solid #edf2f7;
+      text-align: center;
+    }
+
+    .chat-header h1 {
+      font-size: 1.8rem;
+      color: #1a202c;
+    }
+
+    .chat-header p {
+      font-size: 1.05rem;
+      color: #718096;
+      margin-top: 6px;
+    }
+
+    .chat-body {
+      flex: 1;
+      padding: 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background-color: #f8fafc;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 16px 20px;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: #3182ce;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background-color: #ffffff;
+      color: #2d3748;
+      border: 1px solid #e2e8f0;
+      border-bottom-left-radius: 2px;
+    }
+
+    .chat-footer {
+      padding: 20px;
+      background-color: #ffffff;
+      border-top: 1px solid #edf2f7;
+      display: flex;
+      gap: 14px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 16px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: #3182ce;
+    }
+
+    .send-btn {
+      background-color: #3182ce;
+      color: white;
+      border: none;
+      padding: 0 32px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .send-btn:hover {
+      background-color: #2b6cb0;
+    }
+
+    .send-btn:disabled {
+      background-color: #cbd5e0;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-card">
+    <div class="chat-header">
+      <h1>Classroom AI Assistant</h1>
+      <p>Type your message below to start chatting</p>
+    </div>
+
+    <div class="chat-body" id="chatBox">
+      <div class="message bot">
+        Type your message below to start chatting.
+      </div>
+    </div>
+
+    <div class="chat-footer">
+      <input 
+        type="text" 
+        id="userInput" 
+        class="chat-input" 
+        placeholder="Type a question..." 
+        autocomplete="off"
+      />
+      <button id="sendBtn" class="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // REPLACE WITH YOUR PUBLISHED GOOGLE APPS SCRIPT WEB APP URL
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0jE32_zi5rHOlLbAtGY5N2CAOTZNPKCONop3xtGdCocwaEFBdtwE8v6ZFe1bCY7Uj/exec";
+    
+    let sessionId = "-1";
+
+    const chatBox = document.getElementById("chatBox");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    userInput.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      appendMessage(text, "user");
+      userInput.value = "";
+      setLoading(true);
+
+      try {
+        // Send as URLSearchParams to handle Google Script CORS smoothly
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            "text": text,
+            "sessionID": sessionId
+          })
+        });
+
+        const data = await response.json();
+
+        if (data && data.text) {
+          appendMessage(data.text, "bot");
+          if (data.sessionID) {
+            sessionId = data.sessionID;
+          }
+        } else {
+          appendMessage("Sorry, I could not process that message.", "bot");
+        }
+      } catch (error) {
+        console.error("Error communicating with Google Proxy:", error);
+        appendMessage("An error occurred. Please try again.", "bot");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function appendMessage(text, sender) {
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message", sender);
+      msgDiv.innerText = text;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function setLoading(isLoading) {
+      sendBtn.disabled = isLoading;
+      userInput.disabled = isLoading;
+      if (!isLoading) userInput.focus();
+    }
+  </script>
+
+</body>
+</html>
