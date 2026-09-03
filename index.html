@@ -183,8 +183,7 @@
         const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
           headers: {
-            // text/plain prevents the browser from sending a CORS pre-flight OPTIONS request
-            "Content-Type": "text/plain;charset=utf-8" 
+            "Content-Type": "text/plain;charset=utf-8"
           },
           body: JSON.stringify({
             text: text,
