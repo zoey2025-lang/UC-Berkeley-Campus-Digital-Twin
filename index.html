@@ -174,26 +174,26 @@
     async function sendMessage() {
       const text = userInput.value.trim();
       if (!text) return;
-
+    
       appendMessage(text, "user");
       userInput.value = "";
       setLoading(true);
-
+    
       try {
-        // Send as URLSearchParams to handle Google Script CORS smoothly
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
+        // Calls the serverless function hosted alongside your site
+        const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/json"
           },
-          body: new URLSearchParams({
-            "text": text,
-            "sessionID": sessionId
+          body: JSON.stringify({
+            text: text,
+            sessionID: sessionId
           })
         });
-
+    
         const data = await response.json();
-
+    
         if (data && data.text) {
           appendMessage(data.text, "bot");
           if (data.sessionID) {
@@ -203,7 +203,7 @@
           appendMessage("Sorry, I could not process that message.", "bot");
         }
       } catch (error) {
-        console.error("Error communicating with Google Proxy:", error);
+        console.error("Error communicating with backend:", error);
         appendMessage("An error occurred. Please try again.", "bot");
       } finally {
         setLoading(false);
