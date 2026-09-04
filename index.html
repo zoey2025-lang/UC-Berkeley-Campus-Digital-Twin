@@ -88,46 +88,34 @@
       border-bottom-left-radius: 2px;
     }
 
-    /* ANIMATED TYPING INDICATOR */
-    .typing-box {
-      display: none; /* Hidden by default */
-      align-self: flex-start;
-      background-color: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      border-bottom-left-radius: 2px;
-      padding: 16px 22px;
-    }
-
-    .typing-box.active {
-      display: flex; /* Shown when waiting */
+    /* BOUNCING DOTS ANIMATION */
+    .typing-dots {
+      display: flex;
       align-items: center;
       gap: 6px;
+      padding: 4px 0;
     }
 
-    .typing-box span {
-      width: 10px;
-      height: 10px;
+    .typing-dots span {
+      width: 9px;
+      height: 9px;
       background-color: #a0aec0;
       border-radius: 50%;
       display: inline-block;
-      animation: bounce 1.4s infinite ease-in-out both;
+      animation: pulse 1.4s infinite ease-in-out both;
     }
 
-    .typing-box span:nth-child(1) {
-      animation-delay: -0.32s;
-    }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
 
-    .typing-box span:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-
-    @keyframes bounce {
-      0%, 80%, 100% { 
-        transform: scale(0);
-      } 
-      40% { 
-        transform: scale(1.0);
+    @keyframes pulse {
+      0%, 80%, 100% {
+        transform: scale(0.4);
+        opacity: 0.4;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
       }
     }
 
@@ -186,13 +174,6 @@
       <div class="message bot">
         Type your message below to start chatting.
       </div>
-
-      <!-- TYPING INDICATOR (PRE-RENDERED IN DOM) -->
-      <div class="typing-box" id="typingIndicator">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
     </div>
 
     <div class="chat-footer">
@@ -216,7 +197,6 @@
     const chatBox = document.getElementById("chatBox");
     const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
-    const typingIndicator = document.getElementById("typingIndicator");
 
     userInput.addEventListener("keypress", function(e) {
       if (e.key === "Enter") sendMessage();
@@ -226,14 +206,24 @@
       const text = userInput.value.trim();
       if (!text) return;
 
+      // 1. Render User Message
       appendMessage(text, "user");
       userInput.value = "";
       setLoading(true);
 
-      // Show typing indicator
-      showTyping(true);
+      // 2. Immediately create a Placeholder Bot Message with Animated Dots
+      const botMessageDiv = document.createElement("div");
+      botMessageDiv.classList.add("message", "bot");
+      botMessageDiv.innerHTML = `
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+      `;
+      chatBox.appendChild(botMessageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
 
       try {
+        // 3. Send request to Google Apps Script
         const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
           headers: {
@@ -247,22 +237,20 @@
 
         const data = await response.json();
 
-        // Hide indicator before adding the bot's reply
-        showTyping(false);
-
+        // 4. Overwrite the dots inside the bubble with the response text
         if (data && data.text) {
-          appendMessage(data.text, "bot");
+          botMessageDiv.innerText = data.text;
           if (data.sessionID) {
             sessionId = data.sessionID;
           }
         } else {
-          appendMessage("Sorry, I could not process that message.", "bot");
+          botMessageDiv.innerText = "Sorry, I could not process that message.";
         }
       } catch (error) {
-        showTyping(false);
         console.error("Error communicating with Google Proxy:", error);
-        appendMessage("An error occurred. Please try again.", "bot");
+        botMessageDiv.innerText = "An error occurred. Please try again.";
       } finally {
+        chatBox.scrollTop = chatBox.scrollHeight;
         setLoading(false);
       }
     }
@@ -271,18 +259,7 @@
       const msgDiv = document.createElement("div");
       msgDiv.classList.add("message", sender);
       msgDiv.innerText = text;
-      
-      // Always insert new messages BEFORE the typing indicator box
-      chatBox.insertBefore(msgDiv, typingIndicator);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function showTyping(isVisible) {
-      if (isVisible) {
-        typingIndicator.classList.add("active");
-      } else {
-        typingIndicator.classList.remove("active");
-      }
+      chatBox.appendChild(msgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
