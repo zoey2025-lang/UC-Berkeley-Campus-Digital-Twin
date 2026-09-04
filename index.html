@@ -88,6 +88,40 @@
       border-bottom-left-radius: 2px;
     }
 
+    /* ANIMATED TYPING INDICATOR */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 18px 22px;
+    }
+
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background-color: #a0aec0;
+      border-radius: 50%;
+      display: inline-block;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-indicator span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-indicator span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { 
+        transform: scale(0);
+      } 
+      40% { 
+        transform: scale(1.0);
+      }
+    }
+
     .chat-footer {
       padding: 20px;
       background-color: #ffffff;
@@ -159,7 +193,7 @@
 
   <script>
     // REPLACE WITH YOUR PUBLISHED GOOGLE APPS SCRIPT WEB APP URL
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0jE32_zi5rHOlLbAtGY5N2CAOTZNPKCONop3xtGdCocwaEFBdtwE8v6ZFe1bCY7Uj/exec";
+    const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
     
     let sessionId = "-1";
 
@@ -174,11 +208,14 @@
     async function sendMessage() {
       const text = userInput.value.trim();
       if (!text) return;
-    
+
       appendMessage(text, "user");
       userInput.value = "";
       setLoading(true);
-    
+
+      // Show live typing animation
+      const typingIndicator = showTypingIndicator();
+
       try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
@@ -190,9 +227,12 @@
             sessionID: sessionId
           })
         });
-    
+
         const data = await response.json();
-    
+
+        // Remove typing indicator before showing the reply
+        removeTypingIndicator(typingIndicator);
+
         if (data && data.text) {
           appendMessage(data.text, "bot");
           if (data.sessionID) {
@@ -202,6 +242,7 @@
           appendMessage("Sorry, I could not process that message.", "bot");
         }
       } catch (error) {
+        removeTypingIndicator(typingIndicator);
         console.error("Error communicating with Google Proxy:", error);
         appendMessage("An error occurred. Please try again.", "bot");
       } finally {
@@ -215,6 +256,21 @@
       msgDiv.innerText = text;
       chatBox.appendChild(msgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      const typingDiv = document.createElement("div");
+      typingDiv.classList.add("message", "bot", "typing-indicator");
+      typingDiv.innerHTML = "<span></span><span></span><span></span>";
+      chatBox.appendChild(typingDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return typingDiv;
+    }
+
+    function removeTypingIndicator(indicatorElement) {
+      if (indicatorElement && indicatorElement.parentNode) {
+        indicatorElement.parentNode.removeChild(indicatorElement);
+      }
     }
 
     function setLoading(isLoading) {
